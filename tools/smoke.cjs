@@ -56,6 +56,20 @@ async function playRound(page) {
 }
 
 const checks = {
+  async report(browser) {
+    const { page, errors, context } = await open(browser, { child: { avatar: '🧒', band: 'g1' } });
+    await page.goto(BASE + '#/report');
+    await page.waitForSelector('text=لسا ما لعب اليوم');
+    await page.click('text=طفل تجريبي');
+    await page.waitForSelector('.mission');
+    const body = await page.textContent('body');
+    assert.ok(body.includes('50 − 17'), 'regroup explanation shown');
+    assert.ok(!body.includes('null'), 'no stray null text');
+    assert.ok((await page.getAttribute('.whatsapp', 'href')).startsWith('https://wa.me/?text='));
+    await page.screenshot({ path: 'test-results/report.png', fullPage: true });
+    assert.deepEqual(errors.filter((e) => !e.includes('404')), [], errors.join(' | '));
+    await context.close();
+  },
   async shopRound(browser) {
     const { page, errors, context } = await open(browser, { child: { avatar: '👧', band: 'g23' } });
     const levels = await playRound(page);
