@@ -9,7 +9,7 @@
 - **Audio:** a build-time step generates a fixed problem bank (`data/bank.json`) and MP3 audio for every line via OpenAI TTS, so the runtime is fully static.
 - **UI:** vanilla JS screens behind a hash router, with a service worker for offline use.
 
-**Tech Stack:** HTML/CSS/JS (ES modules, no runtime deps, no build), Node 22 (`node --test`, tooling), OpenAI `gpt-4o-mini-tts` (build-time only), Playwright (preinstalled, smoke tests).
+**Tech Stack:** HTML/CSS/JS (ES modules, no runtime deps, no build), Node 22 (`node --test`, tooling), OpenAI `gpt-audio` with `gpt-4o-mini-tts` fallback (build-time only), Playwright (preinstalled, smoke tests).
 
 **Spec:** `docs/superpowers/specs/2026-10-27-dukkanat-ula-design.md`. Read it: section numbers below refer to it.
 
@@ -290,7 +290,7 @@
   - `COUNTRIES`:
     - `jo`: `{ flag:'🇯🇴', cur:{one:'قرش',two:'قرشين',few:'قروش',many:'قرش'}, money:[{v:10,kind:'coin'},{v:5,kind:'coin'},{v:1,kind:'coin'}], dialect:'Jordanian Levantine Arabic' }`
     - `sa`: `{ flag:'🇸🇦', cur:{one:'ريال',two:'ريالين',few:'ريالات',many:'ريال'}, money:[{v:10,kind:'note'},{v:5,kind:'note'},{v:1,kind:'coin'}], dialect:'Saudi Najdi Arabic' }`
-  - `VOICES = { f:'coral', m:'ash' }` in countries.js. These are defaults; Step 5 lets the user replace them.
+  - `VOICES = { f:'marin', m:'cedar' }` in countries.js. These are defaults; Step 5 lets the user replace them.
   - `LINES: {id, text, voice}[]`, fixed lines in Jordanian spelling (the Saudi audio uses the same text with the Saudi dialect instruction). Ids and text:
     - `welcome` «أهلا وسهلا بدكانتك!»
     - `pick` «اختار شخصيتك»
@@ -321,9 +321,14 @@
 - [ ] **Step 2:** Run the catalog test → FAIL. Implement `catalog.js` and `countries.js` → PASS.
 - [ ] **Step 3: Implement `tools/build-bank.mjs`.** It uses seeds A: none, B-g1: 11, B-g23: 23, C: 37, and writes `data/bank.json`.
 - [ ] **Step 4: Implement `tools/gen-audio.mjs`.**
-  - For each line × country, skip the file if it exists. Otherwise `POST https://api.openai.com/v1/audio/speech` with `{ model:'gpt-4o-mini-tts', voice: VOICES[line.voice], input: text, response_format:'mp3', instructions }`, where `instructions` = `"Speak in warm, friendly <dialect> to a 6-year-old child. Slightly slow, clear, cheerful. Pronounce numbers in Arabic."`
+  - For each line × country, skip the file if it exists. Otherwise call `POST https://api.openai.com/v1/chat/completions` with:
+    - `model:'gpt-audio'`, `modalities:['text','audio']`, `audio:{ voice: VOICES[line.voice], format:'mp3' }`.
+    - System message: `"You are a voice actor. Say the user's sentence exactly as written, word for word, nothing before or after. Speak in warm, friendly <dialect> to a 6-year-old child. Slightly slow, clear, cheerful. Read numbers in Arabic."`
+    - User message: the line text.
+  - Decode `choices[0].message.audio.data` (base64) to the MP3 file.
+  - **Fidelity check:** normalize `message.audio.transcript` and the input text (strip diacritics, punctuation, spaces; map Arabic-Indic and Western digits to number words is NOT required — instead compare after removing digits and number words). If the remaining word sets differ by more than 1 word, retry (max 3). After 3 failures, fall back to `POST /v1/audio/speech` with `{ model:'gpt-4o-mini-tts', voice, input, response_format:'mp3', instructions }` (same instruction text), and log the id.
   - Concurrency 4; retry 3× on 429/5xx; exit non-zero if `OPENAI_API_KEY` is missing.
-  - Flag `--sample` writes only `welcome` and `B-g1-00` for every voice in `['coral','nova','shimmer','sage','ash','ballad','verse']` to `samples/` (gitignored) for the user to pick.
+  - Flag `--sample` writes only `welcome` and `B-g1-00` for every voice in `['marin','cedar','coral','shimmer','sage','ash','ballad','verse']` to `samples/` (gitignored) for the user to pick.
 - [ ] **Step 5: Voice pick.** Run `npm run audio -- --sample`, send the samples to the user, and set `VOICES` to the user's choice. Then run `npm run bank && npm run audio`.
 - [ ] **Step 6:** Run `npm test` → PASS (bank test included).
 - [ ] **Step 7:** Commit `feat: content catalog, problem bank and generated audio`.
