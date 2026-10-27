@@ -6,10 +6,10 @@
 
 **Architecture:**
 - **Engine:** pure ES modules (problems, diagnose, adapt, report, classroom), unit-tested with `node --test`.
-- **Audio:** a build-time step generates a fixed problem bank (`data/bank.json`) and MP3 audio for every line via OpenAI TTS, so the runtime is fully static.
+- **Audio:** the user records 86 short clips (numbers, item words, question pieces, fixed lines); a build-time splitter cuts them into `audio/clips/*.mp3`, and each prompt plays as a sequence of clips. A fixed problem bank (`data/bank.json`) is generated at build time.
 - **UI:** vanilla JS screens behind a hash router, with a service worker for offline use.
 
-**Tech Stack:** HTML/CSS/JS (ES modules, no runtime deps, no build), Node 22 (`node --test`, tooling), OpenAI `gpt-audio` with `gpt-4o-mini-tts` fallback (build-time only), Playwright (preinstalled, smoke tests).
+**Tech Stack:** HTML/CSS/JS (ES modules, no runtime deps, no build), Node 22 (`node --test`, tooling), ffmpeg (build-time audio splitting), Playwright (preinstalled, smoke tests).
 
 **Spec:** `docs/superpowers/specs/2026-10-27-dukkanat-ula-design.md`. Read it: section numbers below refer to it.
 
@@ -23,7 +23,7 @@
 **Code and data:**
 - No runtime libraries, no bundler. Fonts: Google Fonts Cairo with system fallback.
 - Every `localStorage` read/write is wrapped in try/catch; the app works in memory without it. Key: `dukkana.v1`.
-- The OpenAI key is read only from env `OPENAI_API_KEY` at build time, and is never written to any file.
+- No paid services. Audio comes only from the user's recordings in `audio/raw/`.
 
 **Game rules:**
 - Currency: JO = قرش with coins 1/5/10; SA = ريال with 1 coin, 5 and 10 notes. Same arithmetic in both.
@@ -75,7 +75,7 @@
 
   ```json
   {"name":"dukkanat-ula","private":true,"type":"module",
-   "scripts":{"test":"node --test tests/","bank":"node tools/build-bank.mjs","audio":"NODE_USE_ENV_PROXY=1 node tools/gen-audio.mjs"}}
+   "scripts":{"test":"node --test tests/","bank":"node tools/build-bank.mjs","split":"node tools/split-audio.mjs"}}
   ```
 
 - [ ] **Step 2: Write failing tests**
@@ -264,74 +264,58 @@
 
 ---
 
-### Task 6: Content catalog, problem bank, OpenAI audio
+### Task 6: Content catalog, audio clip sequences, problem bank, clip splitter
 
 **Files:**
-- Create: `js/data/catalog.js`, `js/data/countries.js`, `tools/build-bank.mjs`, `tools/gen-audio.mjs`, `data/bank.json` (generated), `audio/jo/*.mp3`, `audio/sa/*.mp3` (generated)
+- Create: `js/data/catalog.js`, `js/data/countries.js`, `tools/build-bank.mjs`, `tools/split-audio.mjs`, `data/bank.json` (generated), `audio/raw/` (user recordings), `audio/clips/*.mp3` (generated)
 - Test: `tests/catalog.test.js`, `tests/bank.test.js`
 
 **Interfaces:**
 - Consumes: generators (Task 1).
 - Produces:
-  - `ITEM_INFO: Record<item, { emoji, forms:{one,two,few,many} }>`:
+  - `ITEM_INFO: Record<item, { emoji, forms:{one,two,few} }>` (text for on-screen captions; clip ids are `<item>-one|two|few`):
 
-    | item | emoji | one | two | few | many |
-    |---|---|---|---|---|---|
-    | juice | 🧃 | علبة عصير | علبتين عصير | علب عصير | علبة عصير |
-    | biscuit | 🍪 | باكيت بسكوت | باكيتين بسكوت | باكيتات بسكوت | باكيت بسكوت |
-    | candy | 🍬 | حبة حلو | حبتين حلو | حبات حلو | حبة حلو |
-    | bread | 🍞 | رغيف خبز | رغيفين خبز | أرغفة خبز | رغيف خبز |
+    | item | emoji | one | two | few |
+    |---|---|---|---|---|
+    | juice | 🧃 | علبة عصير | علبتين عصير | علب عصير |
+    | biscuit | 🍪 | باكيت بسكوت | باكيتين بسكوت | باكيتات بسكوت |
+    | candy | 🍬 | حبة حلو | حبتين حلو | حبات حلو |
+    | bread | 🍞 | رغيف خبز | رغيفين خبز | أرغفة خبز |
 
-  - `countPhrase(qty, forms) => string`:
-    - qty 1 → `forms.one`
-    - qty 2 → `forms.two` (no digit)
-    - 3–10 → `"<qty> " + forms.few`
-    - ≥ 11 → `"<qty> " + forms.many`
   - `COUNTRIES`:
-    - `jo`: `{ flag:'🇯🇴', cur:{one:'قرش',two:'قرشين',few:'قروش',many:'قرش'}, money:[{v:10,kind:'coin'},{v:5,kind:'coin'},{v:1,kind:'coin'}], dialect:'Jordanian Levantine Arabic' }`
-    - `sa`: `{ flag:'🇸🇦', cur:{one:'ريال',two:'ريالين',few:'ريالات',many:'ريال'}, money:[{v:10,kind:'note'},{v:5,kind:'note'},{v:1,kind:'coin'}], dialect:'Saudi Najdi Arabic' }`
-  - `VOICES = { f:'marin', m:'cedar' }` in countries.js. These are defaults; Step 5 lets the user replace them.
-  - `LINES: {id, text, voice}[]`, fixed lines in Jordanian spelling (the Saudi audio uses the same text with the Saudi dialect instruction). Ids and text:
-    - `welcome` «أهلا وسهلا بدكانتك!»
-    - `pick` «اختار شخصيتك»
-    - `praise1` «برافو عليك!»
-    - `praise2` «ممتاز!»
-    - `praise3` «يا سلام عليك!»
-    - `tryAgain` «ولا يهمك، يلا نعدّ سوا»
-    - `thanks` «يسلمو إيديك!»
-    - `roundEnd` «خلصت الجولة! شوف كم نجمة جمعت»
-    - `shelfDone` «اكبس خلصت لما تخلّص»
-    - `giveChange` «رجّعلي الباقي»
-    - `num-1`…`num-20` with text = the digit
-  - `promptText(problem, countryKey) => string`:
-    - **A:** «حط {countPhrase(n)} عالرف»
-    - **B:** «بدّي {countPhrase(a, itemA)} و{countPhrase(b, itemB)}. كم صاروا؟»
-    - **C:** «الحساب {countPhrase(price, cur)}، وهاي {countPhrase(paid, cur)}. كم الباقي؟»
-  - `bank.json` = `{ problems: (Problem & { voice:'f'|'m' })[], lines: {id, voice, text:{jo, sa}}[] }`. It includes problem prompts as lines with id = problem.id. Problem voice: A is always `'f'`; B and C alternate by index.
+    - `jo`: `{ flag:'🇯🇴', cur:{one:'قرش',two:'قرشين',few:'قروش'}, curClip:'jo', money:[{v:10,kind:'coin'},{v:5,kind:'coin'},{v:1,kind:'coin'}] }`
+    - `sa`: `{ flag:'🇸🇦', cur:{one:'ريال',two:'ريالين',few:'ريالات'}, curClip:'sa', money:[{v:10,kind:'note'},{v:5,kind:'note'},{v:1,kind:'coin'}] }`
+  - `RECORDINGS`: the exact clip id order of each recording, matching `docs/recording-script.md`:
+    1. `n1`…`n50`
+    2. `juice-one, juice-two, juice-few, biscuit-one, biscuit-two, biscuit-few, candy-one, candy-two, candy-few, bread-one, bread-two, bread-few, jo-one, jo-two, jo-few, sa-one, sa-two, sa-few`
+    3. `put, onShelf, want, andAlso, howMany, bill, here, change`
+    4. `welcome, pick, praise1, praise2, praise3, tryAgain, thanks, roundEnd, shelfDone, giveChange`
+  - `LINE_TEXT: Record<fixedClipId, string>` for recording 4 and 3 (text from the script, for captions and the `speechSynthesis` fallback).
+  - `countClips(qty, key) => string[]`: qty 1 → `[key-one]`; 2 → `[key-two]`; 3–10 → `[n<qty>, key-few]`; ≥ 11 → `[n<qty>, key-one]`.
+  - `countText(qty, forms) => string`: the same rule as text («علبة عصير», «علبتين عصير», «7 علب عصير», «12 علبة عصير»).
+  - `promptClips(problem, countryKey) => string[]`:
+    - **A:** `['put', ...countClips(n, item), 'onShelf']`
+    - **B:** `['want', ...countClips(a, itemA), 'andAlso', ...countClips(b, itemB), 'howMany']`
+    - **C:** `['bill', ...countClips(price, curClip), 'here', ...countClips(paid, curClip), 'change']`
+  - `promptText(problem, countryKey) => string`: the same sequence as text, for captions and the fallback (e.g. C jo «الحساب 17 قرش، وهاي 20 قرش. كم الباقي؟»).
+  - `bank.json` = `{ problems: Problem[] }`.
 
 - [ ] **Step 1: Write failing tests:**
-  - `countPhrase`: 1/2/7/12 for juice, giving «علبة عصير», «علبتين عصير», «7 علب عصير», «12 علبة عصير».
-  - `promptText` for C {price:17, paid:20}:
-    - jo → «الحساب 17 قرش، وهاي 20 قرش. كم الباقي؟»
-    - sa → «الحساب 17 ريال، وهاي 20 ريال. كم الباقي؟»
-  - `bank.test.js` (runs after generation):
-    - 212 problems: 52 A, 40 B-g1, 40 B-g23, 80 C.
-    - Unique ids.
-    - Every line id has `audio/jo/<id>.mp3` and `audio/sa/<id>.mp3` on disk with size > 1000 bytes.
+  - `countClips(1,'juice')` → `['juice-one']`; `(2,'juice')` → `['juice-two']`; `(7,'juice')` → `['n7','juice-few']`; `(12,'juice')` → `['n12','juice-one']`.
+  - `promptClips({level:'C', price:17, paid:20}, 'sa')` → `['bill','n17','sa-one','here','n20','sa-one','change']`.
+  - `promptText` for the same problem with `'jo'` → «الحساب 17 قرش، وهاي 20 قرش. كم الباقي؟».
+  - `RECORDINGS` has lengths 50, 18, 8, 10 and no duplicate ids.
+  - `bank.test.js` (runs on generated files): 212 problems (52 A, 40 B-g1, 40 B-g23, 80 C), unique ids; every clip id returned by `promptClips` for every problem × both countries, plus every id in `RECORDINGS`, exists as `audio/clips/<id>.mp3`. Skip the clip-file check with a clear message when `audio/clips/` does not exist yet (recordings pending).
 - [ ] **Step 2:** Run the catalog test → FAIL. Implement `catalog.js` and `countries.js` → PASS.
-- [ ] **Step 3: Implement `tools/build-bank.mjs`.** It uses seeds A: none, B-g1: 11, B-g23: 23, C: 37, and writes `data/bank.json`.
-- [ ] **Step 4: Implement `tools/gen-audio.mjs`.**
-  - For each line × country, skip the file if it exists. Otherwise call `POST https://api.openai.com/v1/chat/completions` with:
-    - `model:'gpt-audio'`, `modalities:['text','audio']`, `audio:{ voice: VOICES[line.voice], format:'mp3' }`.
-    - System message: `"You are a voice actor. Say the user's sentence exactly as written, word for word, nothing before or after. Speak in warm, friendly <dialect> to a 6-year-old child. Slightly slow, clear, cheerful. Read numbers in Arabic."`
-    - User message: the line text.
-  - Decode `choices[0].message.audio.data` (base64) to the MP3 file.
-  - **Fidelity check:** normalize `message.audio.transcript` and the input text (strip diacritics, punctuation and digits). If the remaining word sets differ by more than 1 word, retry (max 3). After 3 failures, fall back to `POST /v1/audio/speech` with `{ model:'gpt-4o-mini-tts', voice, input, response_format:'mp3', instructions }` (same instruction text), and log the id.
-  - Concurrency 4; retry 3× on 429/5xx; exit non-zero if `OPENAI_API_KEY` is missing.
-  - Flag `--sample` writes only `welcome` and `B-g1-00` for every voice in `['marin','cedar','coral','shimmer','sage','ash','ballad','verse']` to `samples/` (gitignored) for the user to pick.
-- [ ] **Step 5: Voice pick.** Run `npm run audio -- --sample`, send the samples to the user, and set `VOICES` to the user's choice. Then run `npm run bank && npm run audio`.
-- [ ] **Step 6:** Run `npm test` → PASS (bank test included).
-- [ ] **Step 7:** Commit `feat: content catalog, problem bank and generated audio`.
+- [ ] **Step 3: Implement `tools/build-bank.mjs`.** Seeds: B-g1 11, B-g23 23, C 37. Writes `data/bank.json`.
+- [ ] **Step 4: Implement `tools/split-audio.mjs <recordingIndex 1-4> <file>`.**
+  - Convert to mono 44.1 kHz WAV with ffmpeg, run `silencedetect=noise=-35dB:d=0.7`, and take the voiced segments between silences.
+  - Drop segments shorter than 0.15 s. If the segment count ≠ the `RECORDINGS[i]` length, print the expected and found counts plus each segment's start/duration, then exit 1 (try `-30dB`/`-40dB` via `--noise`, and `--min-silence` to tune).
+  - On a match, write each segment with 80 ms padding, `loudnorm`, and a 15 ms fade in/out to `audio/clips/<id>.mp3` (mono, 64 kbps).
+  - Keep the originals in `audio/raw/`.
+- [ ] **Step 5: Split the user's recordings.** When the 4 files arrive, run the splitter for each. Then play back 3 random composed prompts (concatenate clips with ffmpeg to `test-results/`) and send them to the user to confirm they sound right.
+- [ ] **Step 6:** Run `npm run bank && npm test` → PASS.
+- [ ] **Step 7:** Commit `feat: content catalog, clip sequences, problem bank and audio splitter`.
 
 ---
 
@@ -342,22 +326,22 @@
 - Test: `tests/store.test.js`
 
 **Interfaces:**
-- Consumes: `bank.json`, `COUNTRIES`, `LINES`.
+- Consumes: `bank.json`, `COUNTRIES`, `LINE_TEXT`, `promptClips`, `promptText`.
 - Produces:
   - `store.js`:
     - `load() => AppState`, `save(state)`, `addAttempt(state, attempt) => AppState`, `resetChild(state)`.
     - `AppState = { child:{avatar:string, band:'g1'|'g23'}|null, country:'jo'|'sa', attempts:Attempt[] }`.
     - Takes `storage` as an optional parameter (default `globalThis.localStorage`) for tests.
   - `audio.js`:
-    - `createAudio({ getCountry, textOf:(id)=>string })` returns `{ unlock(), play(id) => Promise<void>, stop() }`.
-    - `play` loads `audio/<country>/<id>.mp3`. On any error it falls back to `speechSynthesis` (lang `ar-JO` or `ar-SA`, else `ar`) and resolves either way, never rejecting.
+    - `createAudio()` returns `{ unlock(), playSeq(clipIds: string[], fallbackText?: string) => Promise<void>, stop() }`.
+    - `playSeq` plays `audio/clips/<id>.mp3` one after another, skipping any clip that fails to load. If every clip fails and `fallbackText` is given, it tries `speechSynthesis` (lang `ar-JO`, else `ar`). It resolves either way, never rejects. `stop()` cancels a running sequence (a new `playSeq` call stops the previous one).
   - `main.js`:
     - Hash router: `#/start`, `#/map`, `#/shop`, `#/report`, `#/report/<studentId>`, `#/teacher`.
     - `ctx = { state, setState(fn), bank, audio, go(route) }`; each screen exports `render(root: HTMLElement, ctx)`.
   - **Start screen:**
     - 4 avatar buttons (🧒 👧 👦 👩‍🦱) and 2 band buttons with big «1» and «2 – 3».
     - Corner buttons «للأهل» (`#/report`), «للمعلم» (`#/teacher`), and the flag (toggles `jo`/`sa`).
-    - First tap calls `audio.unlock()` and plays `welcome`.
+    - First tap calls `audio.unlock()` and plays `playSeq(['welcome'])`.
   - **Map screen:** the shop 🏪 (active, pulse animation) and bakery 🥖, market 🍅, bus 🚌 locked with 🔒.
 
 - [ ] **Step 1: Write failing tests (Review Focus 1):**
@@ -404,8 +388,8 @@
 - **C:** a price tag and the customer's paid money (coins or notes from `COUNTRIES`). Money buttons add to a tray; tapping a tray piece removes it. «تفضّل ✓». Answer = tray sum.
 
 **Hints:**
-- **A/C:** items highlight one by one with `num-k` audio (k ≤ 20).
-- **B:** the larger group gets a boxed label with its count, then the smaller group's items highlight one by one with `num-(larger+i)` audio (count-on).
+- **A/C:** items highlight one by one with `n<k>` clip audio.
+- **B:** the larger group gets a boxed label with its count, then the smaller group's items highlight one by one with `n<larger+i>` clip audio (count-on).
 
 - [ ] **Step 1: Write failing tests:**
   - `applyKey('', '0') === '0'`
@@ -484,7 +468,7 @@
 **Interfaces:**
 - **`sw.js`:**
   - Cache `dukkana-v1`.
-  - Precache the app shell (all html/css/js/json files listed explicitly) and `audio/{jo,sa}/` fixed `LINES`.
+  - Precache the app shell (all html/css/js/json files listed explicitly) and every clip of recordings 1, 3 and 4 plus the item and currency clips (all of `RECORDINGS`, 86 files).
   - Cache-first for same-origin GET, with runtime caching for other `audio/` files.
   - Register in `main.js`, only when `'serviceWorker' in navigator`.
 - **`tools/smoke.cjs`** (Playwright, against `http://localhost:8080`), at 390×844:
