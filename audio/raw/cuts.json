@@ -1,0 +1,436 @@
+{
+ "source": "audio/raw/take1.m4a",
+ "note": "Built from --detect at -35dB/0.3s plus per-segment ASR check; candy clips are spoken as حلوة (retake pending).",
+ "clips": [
+  {
+   "id": "n2",
+   "start": 0.89,
+   "dur": 0.33
+  },
+  {
+   "id": "n3",
+   "start": 1.95,
+   "dur": 0.39
+  },
+  {
+   "id": "n4",
+   "start": 3.16,
+   "dur": 0.33
+  },
+  {
+   "id": "n5",
+   "start": 4.47,
+   "dur": 0.33
+  },
+  {
+   "id": "n6",
+   "start": 5.92,
+   "dur": 0.28
+  },
+  {
+   "id": "n7",
+   "start": 7.28,
+   "dur": 0.29
+  },
+  {
+   "id": "n8",
+   "start": 8.5,
+   "dur": 0.38
+  },
+  {
+   "id": "n9",
+   "start": 9.78,
+   "dur": 0.3
+  },
+  {
+   "id": "n10",
+   "start": 10.84,
+   "dur": 0.39
+  },
+  {
+   "id": "n11",
+   "start": 12.11,
+   "dur": 0.53
+  },
+  {
+   "id": "n12",
+   "start": 13.62,
+   "dur": 0.39
+  },
+  {
+   "id": "n13",
+   "start": 14.72,
+   "dur": 0.49
+  },
+  {
+   "id": "n14",
+   "start": 16.07,
+   "dur": 0.65
+  },
+  {
+   "id": "n15",
+   "start": 17.33,
+   "dur": 0.48
+  },
+  {
+   "id": "n16",
+   "start": 18.62,
+   "dur": 0.36
+  },
+  {
+   "id": "n17",
+   "start": 19.79,
+   "dur": 0.51
+  },
+  {
+   "id": "n18",
+   "start": 20.84,
+   "dur": 0.61
+  },
+  {
+   "id": "n19",
+   "start": 22.11,
+   "dur": 0.5
+  },
+  {
+   "id": "n20",
+   "start": 23.25,
+   "dur": 0.53
+  },
+  {
+   "id": "n21",
+   "start": 24.41,
+   "dur": 0.85
+  },
+  {
+   "id": "n22",
+   "start": 25.86,
+   "dur": 0.86
+  },
+  {
+   "id": "n23",
+   "start": 27.27,
+   "dur": 0.87
+  },
+  {
+   "id": "n24",
+   "start": 28.63,
+   "dur": 0.82
+  },
+  {
+   "id": "n25",
+   "start": 29.93,
+   "dur": 0.82
+  },
+  {
+   "id": "n26",
+   "start": 31.25,
+   "dur": 0.78
+  },
+  {
+   "id": "n27",
+   "start": 32.56,
+   "dur": 0.75
+  },
+  {
+   "id": "n28",
+   "start": 33.88,
+   "dur": 0.85
+  },
+  {
+   "id": "n29",
+   "start": 35.21,
+   "dur": 0.81
+  },
+  {
+   "id": "n30",
+   "start": 36.46,
+   "dur": 0.59
+  },
+  {
+   "id": "n31",
+   "start": 37.57,
+   "dur": 0.94
+  },
+  {
+   "id": "n32",
+   "start": 39.15,
+   "dur": 0.88
+  },
+  {
+   "id": "n33",
+   "start": 40.46,
+   "dur": 0.92
+  },
+  {
+   "id": "n34",
+   "start": 41.88,
+   "dur": 0.96
+  },
+  {
+   "id": "n35",
+   "start": 43.33,
+   "dur": 0.92
+  },
+  {
+   "id": "n36",
+   "start": 44.77,
+   "dur": 0.9
+  },
+  {
+   "id": "n37",
+   "start": 46.24,
+   "dur": 0.84
+  },
+  {
+   "id": "n38",
+   "start": 47.5,
+   "dur": 0.97
+  },
+  {
+   "id": "n39",
+   "start": 48.99,
+   "dur": 0.82
+  },
+  {
+   "id": "n40",
+   "start": 50.32,
+   "dur": 0.56
+  },
+  {
+   "id": "n41",
+   "start": 51.52,
+   "dur": 0.9
+  },
+  {
+   "id": "n42",
+   "start": 53.14,
+   "dur": 0.77
+  },
+  {
+   "id": "n43",
+   "start": 54.53,
+   "dur": 0.89
+  },
+  {
+   "id": "n44",
+   "start": 55.97,
+   "dur": 0.91
+  },
+  {
+   "id": "n45",
+   "start": 57.49,
+   "dur": 0.8
+  },
+  {
+   "id": "n46",
+   "start": 58.8,
+   "dur": 0.8
+  },
+  {
+   "id": "n47",
+   "start": 59.99,
+   "dur": 0.87
+  },
+  {
+   "id": "n48",
+   "start": 61.35,
+   "dur": 0.99
+  },
+  {
+   "id": "n49",
+   "start": 62.76,
+   "dur": 0.9
+  },
+  {
+   "id": "n50",
+   "start": 64.16,
+   "dur": 0.46
+  },
+  {
+   "id": "n1",
+   "start": 116.35,
+   "dur": 0.51
+  },
+  {
+   "id": "juice-one",
+   "start": 65.53,
+   "dur": 0.65
+  },
+  {
+   "id": "juice-two",
+   "start": 66.94,
+   "dur": 0.84
+  },
+  {
+   "id": "juice-few",
+   "start": 68.43,
+   "dur": 0.67
+  },
+  {
+   "id": "biscuit-one",
+   "start": 69.57,
+   "dur": 0.66
+  },
+  {
+   "id": "biscuit-two",
+   "start": 70.98,
+   "dur": 0.85
+  },
+  {
+   "id": "biscuit-few",
+   "start": 72.47,
+   "dur": 0.86
+  },
+  {
+   "id": "candy-one",
+   "start": 74.08,
+   "dur": 0.51
+  },
+  {
+   "id": "candy-two",
+   "start": 75.43,
+   "dur": 0.51
+  },
+  {
+   "id": "candy-few",
+   "start": 76.49,
+   "dur": 0.63
+  },
+  {
+   "id": "bread-one",
+   "start": 77.75,
+   "dur": 0.62
+  },
+  {
+   "id": "bread-two",
+   "start": 79.03,
+   "dur": 0.69
+  },
+  {
+   "id": "bread-few",
+   "start": 80.2,
+   "dur": 0.67
+  },
+  {
+   "id": "jo-one",
+   "start": 81.56,
+   "dur": 0.24
+  },
+  {
+   "id": "jo-two",
+   "start": 82.43,
+   "dur": 0.52
+  },
+  {
+   "id": "jo-few",
+   "start": 83.56,
+   "dur": 0.33
+  },
+  {
+   "id": "sa-one",
+   "start": 84.61,
+   "dur": 0.41
+  },
+  {
+   "id": "sa-two",
+   "start": 85.58,
+   "dur": 0.51
+  },
+  {
+   "id": "sa-few",
+   "start": 86.6,
+   "dur": 0.41
+  },
+  {
+   "id": "put",
+   "start": 87.85,
+   "dur": 0.3
+  },
+  {
+   "id": "onShelf",
+   "start": 88.96,
+   "dur": 0.33
+  },
+  {
+   "id": "want",
+   "start": 90.06,
+   "dur": 0.37
+  },
+  {
+   "id": "andAlso",
+   "start": 91.06,
+   "dur": 0.56
+  },
+  {
+   "id": "howMany",
+   "start": 92.17,
+   "dur": 0.49
+  },
+  {
+   "id": "bill",
+   "start": 93.58,
+   "dur": 0.49
+  },
+  {
+   "id": "here",
+   "start": 94.72,
+   "dur": 0.48
+  },
+  {
+   "id": "change",
+   "start": 95.68,
+   "dur": 0.56
+  },
+  {
+   "id": "welcome",
+   "start": 97.39,
+   "dur": 1.15
+  },
+  {
+   "id": "pick",
+   "start": 99.28,
+   "dur": 0.74
+  },
+  {
+   "id": "praise1",
+   "start": 100.7,
+   "dur": 0.54
+  },
+  {
+   "id": "praise2",
+   "start": 101.95,
+   "dur": 0.46
+  },
+  {
+   "id": "praise3",
+   "start": 103.08,
+   "dur": 0.76
+  },
+  {
+   "id": "tryAgain",
+   "start": 104.55,
+   "dur": 1.35
+  },
+  {
+   "id": "thanks",
+   "start": 106.67,
+   "dur": 0.72
+  },
+  {
+   "id": "roundEnd",
+   "start": 108.24,
+   "dur": 2.11
+  },
+  {
+   "id": "shelfDone",
+   "start": 111.16,
+   "dur": 1.33
+  },
+  {
+   "id": "giveChange",
+   "start": 113.01,
+   "dur": 0.72
+  }
+ ]
+}
