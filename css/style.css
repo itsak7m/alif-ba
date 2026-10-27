@@ -25,7 +25,7 @@
 html, body { margin: 0; }
 
 body {
-  background: linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%) fixed;
+  background: var(--bg-2) linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100vh) no-repeat;
   min-height: 100vh;
   -webkit-tap-highlight-color: transparent;
 }

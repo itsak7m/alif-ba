@@ -56,6 +56,19 @@ async function playRound(page) {
 }
 
 const checks = {
+  async teacher(browser) {
+    const { page, errors, context } = await open(browser, { viewport: { width: 1366, height: 768 } });
+    await page.goto(BASE + '#/teacher');
+    await page.waitForSelector('.teacher-grid');
+    assert.equal(await page.locator('.teacher-grid tbody tr').count(), 24);
+    assert.ok((await page.textContent('.group-card h3')).startsWith('6 طلاب'));
+    await page.screenshot({ path: 'test-results/teacher.png', fullPage: true });
+    await page.click('.teacher-grid tbody tr >> nth=0');
+    await page.waitForSelector('.mission');
+    assert.ok((await page.textContent('h2')).includes('سارة'));
+    assert.deepEqual(errors.filter((e) => !e.includes('404')), [], errors.join(' | '));
+    await context.close();
+  },
   async report(browser) {
     const { page, errors, context } = await open(browser, { child: { avatar: '🧒', band: 'g1' } });
     await page.goto(BASE + '#/report');
