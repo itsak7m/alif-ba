@@ -56,6 +56,37 @@ async function playRound(page) {
 }
 
 const checks = {
+  async audioBlocked(browser) {
+    const { page, errors, context } = await open(browser, { child: { avatar: '👦', band: 'g1' }, blockAudio: true });
+    await playRound(page);
+    assert.equal((await attempts(page)).length, 5);
+    assert.deepEqual(errors, [], errors.join(' | '));
+    await context.close();
+  },
+  async doubleTap(browser) {
+    const { page, context } = await open(browser, { child: { avatar: '👦', band: 'g1' } });
+    await page.goto(BASE + '#/shop');
+    await page.waitForSelector('.shelf');
+    const n = await page.evaluate(() => Number(document.querySelector('.bubble').textContent.match(/\d+/)[0]));
+    for (let i = 0; i < n; i++) await page.click('.supply .tile');
+    await page.dblclick('.submit');
+    await page.waitForTimeout(300);
+    assert.equal((await attempts(page)).length, 1);
+    await context.close();
+  },
+  async offline(browser) {
+    const { page, context } = await open(browser);
+    await page.evaluate(() => Promise.race([navigator.serviceWorker.ready, new Promise((_, no) => setTimeout(() => no(new Error('service worker never became ready')), 5000))]));
+    await page.reload();
+    await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 5000 });
+    await page.waitForTimeout(1500);
+    await context.setOffline(true);
+    await page.reload();
+    await page.waitForSelector('.hero', { timeout: 5000 });
+    await page.goto(BASE + '#/report');
+    await page.waitForSelector('.mission', { timeout: 5000 });
+    await context.close();
+  },
   async teacher(browser) {
     const { page, errors, context } = await open(browser, { viewport: { width: 1366, height: 768 } });
     await page.goto(BASE + '#/teacher');
@@ -121,5 +152,13 @@ const checks = {
     catch (e) { failed++; console.log(`FAIL ${name}: ${e.message.split('\n')[0]}`); }
   }
   await browser.close();
+  if (!only || only === 'webkit') {
+    try {
+      const wk = await webkit.launch();
+      const info = await checks.shopRound(wk).catch((e) => { failed++; return `FAIL ${e.message.split('\n')[0]}`; });
+      console.log(`webkit shopRound: ${info}`);
+      await wk.close();
+    } catch (e) { console.log(`skip webkit: ${e.message.split('\n')[0]}`); }
+  }
   process.exit(failed ? 1 : 0);
 })();
