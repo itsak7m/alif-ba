@@ -1,11 +1,12 @@
 // Offline support: precache every app file listed in precache.json, serve cache-first.
+const VERSION = '02462f8039'; // rewritten by tools/build-precache.mjs
 const PREFIX = 'dukkana-';
 const FONT_CACHE = 'dukkana-fonts';
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
-    const { version, files } = await (await fetch('precache.json', { cache: 'no-store' })).json();
-    const cache = await caches.open(PREFIX + version);
+    const { files } = await (await fetch('precache.json', { cache: 'no-store' })).json();
+    const cache = await caches.open(PREFIX + VERSION);
     await cache.addAll(files);
     await self.skipWaiting();
   })());
@@ -13,10 +14,7 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
-    const { version } = await (await fetch('precache.json', { cache: 'no-store' }).catch(() => null))?.json?.() ?? {};
-    if (version) {
-      for (const key of await caches.keys()) if (key.startsWith(PREFIX) && key !== PREFIX + version && key !== FONT_CACHE) await caches.delete(key);
-    }
+    for (const key of await caches.keys()) if (key.startsWith(PREFIX) && key !== PREFIX + VERSION && key !== FONT_CACHE) await caches.delete(key);
     await self.clients.claim();
   })());
 });

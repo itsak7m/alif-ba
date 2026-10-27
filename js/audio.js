@@ -7,12 +7,14 @@ export function createAudio({ base = 'audio/clips/' } = {}) {
   const el = typeof Audio === 'function' ? new Audio() : null;
   let token = 0;
   let unlocked = false;
+  let cancelCurrent = null;
 
   function playOne(id, my) {
     return new Promise((resolve) => {
       if (!el || my !== token) return resolve(false);
       let done = false;
-      const finish = (ok) => { if (!done) { done = true; clearTimeout(timer); el.onended = el.onerror = null; resolve(ok); } };
+      const finish = (ok) => { if (!done) { done = true; clearTimeout(timer); el.onended = el.onerror = null; cancelCurrent = null; resolve(ok); } };
+      cancelCurrent = () => finish(false);
       const timer = setTimeout(() => finish(false), CLIP_TIMEOUT_MS);
       el.onended = () => finish(true);
       el.onerror = () => finish(false);
@@ -44,6 +46,7 @@ export function createAudio({ base = 'audio/clips/' } = {}) {
 
   function stop() {
     token++;
+    cancelCurrent?.();
     try { el?.pause(); } catch { /* ignore */ }
     try { speechSynthesis.cancel(); } catch { /* ignore */ }
   }

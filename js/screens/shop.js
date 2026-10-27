@@ -23,8 +23,8 @@ function pieces(amount) {
   return out;
 }
 
-async function countAloud(ctx, els, from = 1) {
-  for (let i = 0; i < els.length; i++) {
+async function countAloud(ctx, alive, els, from = 1) {
+  for (let i = 0; i < els.length && alive(); i++) {
     els[i].classList.add('lit');
     await Promise.all([ctx.audio.playSeq([`n${from + i}`]), wait(450)]);
   }
@@ -43,7 +43,7 @@ function shelfLevel(p) {
   return {
     el: h('div', {}, shelf, h('div', { class: 'supply' }, add)),
     answer: () => shelf.children.length,
-    async hint(ctx) { await countAloud(ctx, [...shelf.children]); },
+    async hint(ctx, alive) { await countAloud(ctx, alive, [...shelf.children]); },
     clear() { [...shelf.children].forEach((t) => t.classList.remove('lit')); },
   };
 }
@@ -62,12 +62,12 @@ function orderLevel(p, onChange) {
     el: h('div', {}, h('div', { class: 'counter' }, ga, h('span', { class: 'plus' }, '+'), gb), shown, h('div', { class: 'pad', dir: 'ltr' }, keys)),
     answer: () => Number(display),
     hasAnswer: () => canSubmit(display),
-    async hint(ctx) {
+    async hint(ctx, alive) {
       // Count on from the bigger group instead of counting everything from 1.
       const [big, small, bigN] = p.a >= p.b ? [ga, gb, p.a] : [gb, ga, p.b];
       big.classList.add('boxed');
       await Promise.all([ctx.audio.playSeq([`n${bigN}`]), wait(700)]);
-      await countAloud(ctx, [...small.children], bigN + 1);
+      if (alive()) await countAloud(ctx, alive, [...small.children], bigN + 1);
     },
     clear() {
       [ga, gb].forEach((g) => { g.classList.remove('boxed'); [...g.children].forEach((t) => t.classList.remove('lit')); });
@@ -99,7 +99,7 @@ function changeLevel(p, country) {
       tray, sum, steps,
       h('div', { class: 'supply' }, supply)),
     answer: total,
-    async hint(ctx) {
+    async hint(ctx, alive) {
       // Count up from the price to what was paid: ones to the next ten, then tens.
       const marks = [];
       let at = p.price;
@@ -109,7 +109,7 @@ function changeLevel(p, country) {
         marks.push([at, step]);
       }
       steps.replaceChildren(...marks.map(([, step]) => h('span', { class: 'thing' }, `+${step}`)));
-      for (let i = 0; i < marks.length; i++) {
+      for (let i = 0; i < marks.length && alive(); i++) {
         steps.children[i].classList.add('lit');
         await Promise.all([ctx.audio.playSeq([`n${marks[i][0]}`]), wait(450)]);
       }
@@ -126,6 +126,9 @@ export function render(root, ctx) {
   const used = new Set();
   let index = 0;
   let stars = 0;
+  // Async feedback must not draw over another screen after the child navigates away.
+  const seq = ctx.renderSeq;
+  const alive = () => ctx.renderSeq === seq;
 
   const header = () => h('div', { class: 'shop-head' },
     h('a', { class: 'chip', href: '#/map' }, '→'),
@@ -167,6 +170,7 @@ export function render(root, ctx) {
         document.body.append(coin);
         setTimeout(() => coin.remove(), 1000);
         await Promise.all([ctx.audio.playSeq([randomOf(PRAISE)], 'برافو'), wait(1300)]);
+        if (!alive()) return;
         index++;
         return next();
       }
@@ -175,8 +179,10 @@ export function render(root, ctx) {
         feedback.className = 'feedback try';
         feedback.textContent = LINE_TEXT.tryAgain;
         await ctx.audio.playSeq(['tryAgain'], LINE_TEXT.tryAgain);
-        await ui.hint(ctx);
+        if (!alive()) return;
+        await ui.hint(ctx, alive);
         await wait(500);
+        if (!alive()) return;
         ui.clear();
         feedback.textContent = 'جرّب كمان مرة 💪';
         busy = false;
@@ -186,6 +192,7 @@ export function render(root, ctx) {
       feedback.className = 'feedback try';
       feedback.textContent = `الجواب ${p.answer}. المرة الجاي بتزبط! 💛`;
       await Promise.all([ctx.audio.playSeq([`n${p.answer}`].filter(() => p.answer >= 1 && p.answer <= 50)), wait(2000)]);
+      if (!alive()) return;
       index++;
       next();
     });

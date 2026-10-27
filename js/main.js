@@ -15,6 +15,7 @@ const ctx = {
   bank: [],
   audio: createAudio(),
   params: [],
+  renderSeq: 0,
   go(route) { location.hash = `#/${route}`; },
   refresh() { render(); },
   setState(fn) { ctx.state = fn(ctx.state); save(ctx.state); },
@@ -25,6 +26,7 @@ function render() {
   const screen = ROUTES[name] || start;
   // Playing needs a chosen child; send anyone else back to the start screen.
   if ((screen === shop || screen === map) && !ctx.state.child) return ctx.go('start');
+  ctx.renderSeq++;
   ctx.audio.stop();
   ctx.params = params;
   root.replaceChildren();

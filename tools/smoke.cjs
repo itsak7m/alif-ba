@@ -4,8 +4,8 @@ const { chromium, webkit } = require('playwright');
 const assert = require('node:assert/strict');
 const BASE = process.env.BASE || 'http://localhost:8080/';
 
-async function open(browser, { child, country = 'jo', viewport = { width: 390, height: 844 }, blockAudio = false } = {}) {
-  const context = await browser.newContext({ viewport });
+async function open(browser, { child, country = 'jo', viewport = { width: 390, height: 844 }, blockAudio = false, serviceWorkers = 'allow' } = {}) {
+  const context = await browser.newContext({ viewport, serviceWorkers });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -56,6 +56,32 @@ async function playRound(page) {
 }
 
 const checks = {
+  async silentAfterLeavingHint(browser) {
+    const { page, context } = await open(browser, { child: { avatar: '👦', band: 'g1' }, serviceWorkers: 'block' });
+    await page.goto(BASE + '#/shop');
+    await page.waitForSelector('.shelf');
+    await page.click('.supply .tile');
+    await page.click('.supply .tile');
+    await page.click('.submit'); // 2 items is never the target (3..15): wrong answer starts the hint
+    await page.waitForSelector('.shelf .thing.lit'); // hint is counting aloud
+    await page.click('a.chip[href="#/map"]');
+    await page.waitForTimeout(200);
+    const after = [];
+    page.on('request', (r) => { if (r.url().includes('/audio/clips/')) after.push(r.url()); });
+    await page.waitForTimeout(3000);
+    assert.deepEqual(after, [], `clips requested after leaving: ${after.length}`);
+    await context.close();
+  },
+  async leaveMidFeedback(browser) {
+    const { page, context } = await open(browser, { child: { avatar: '👦', band: 'g1' } });
+    await page.goto(BASE + '#/shop');
+    await solve(page);
+    await page.click('a.chip[href="#/map"]');
+    await page.waitForTimeout(6500);
+    assert.equal(await page.locator('.map').count(), 1, 'map stays on screen');
+    assert.equal(await page.locator('.submit').count(), 0, 'no shop problem drawn over the map');
+    await context.close();
+  },
   async audioBlocked(browser) {
     const { page, errors, context } = await open(browser, { child: { avatar: '👦', band: 'g1' }, blockAudio: true });
     await playRound(page);
