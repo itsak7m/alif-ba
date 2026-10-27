@@ -1,0 +1,10 @@
+{
+  "name": "dukkanat-ula",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "bank": "node tools/build-bank.mjs",
+    "split": "node tools/split-audio.mjs"
+  }
+}
